@@ -12,9 +12,7 @@ from test import val_net_single, val_net_pair
 
 class DataModule(LightningDataModule):
 
-  """ A Lightning Trainer uses a model and a datamodule. Here is defined a datamodule.
-        It's basically a wrapper around dataloaders.
-    """  
+  """ A Lightning Trainer uses a model and a datamodule. Here is defined a datamodule."""  
     
   def __init__(self, input_root,image_size, train_batch_size, num_workers, singleval):
 
