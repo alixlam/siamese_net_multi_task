@@ -3,7 +3,7 @@
 Projet 3A - IMT Atlantique 
 
 Implementation of a multi-task siamese network for segmentation, matching and classification. Relevant features are extracted with a VGG16 network, segmentation is done thanks to a decoder with skip connections. 
-After a couple of tests it seems that for the mammography task it is recommended to share the weights (see figure below). 
+After a couple of tests it seems that it is recommended to share the weights (see figure below). 
 
 ![img](https://github.com/alixlam/siamese_net_multi_task/blob/main/images/Screenshot%202021-03-25%20at%2016.33.56.png)
 
