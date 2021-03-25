@@ -13,4 +13,7 @@ Projet 3A - IMT Atlantique
 
 |files|Use|
 |-----|---|
-||test|
+|[config.py](https://github.com/alixlam/siamese_net_multi_task/blob/main/utils.py)|training and dataloader parameters|
+|losses.py||
+|lightningModel.py||
+|models.py||
