@@ -12,7 +12,7 @@ After a couple of tests it seems that it is recommended to share the weights (se
 
 * [Files](#file)
 * [Run code](#run)
-*
+
 
 ## Files <a name="file"></a>
 
