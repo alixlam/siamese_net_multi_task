@@ -21,9 +21,10 @@ Projet 3A - IMT Atlantique
 |[models.py](https://github.com/alixlam/siamese_net_multi_task/blob/main/models.py)|Encoder and Decoder models|
 |[train.py](https://github.com/alixlam/siamese_net_multi_task/blob/main/train.py)|example of code for training|
 |[utils.py](https://github.com/alixlam/siamese_net_multi_task/blob/main/utils.py)|Useful functions for displays|
-|[mammoDataPair.py](https://github.com/alixlam/siamese_net_multi_task/tree/main/data/mammoDataPair.py)|loader for data pair (CC and MLO view)|
-|[mammoDataSingle.py](https://github.com/alixlam/siamese_net_multi_task/tree/main/data/mammoDataSingle.py)|loading for single data (CC or MLO view)|
-|[datamodule.py](https://github.com/alixlam/siamese_net_multi_task/tree/main/data/datamodule.py)|Wrapper around mammoDataPair and single for lightning module|
+|[mammoDataPair.py](https://github.com/alixlam/siamese_net_multi_task/tree/main/Data/mammoDataPair.py)|loader for data pair (CC and MLO view)|
+|[mammoDataSingle.py](https://github.com/alixlam/siamese_net_multi_task/tree/main/Data/mammoDataSingle.py)|loading for single data (CC or MLO view)|
+|[datamodule.py](https://github.com/alixlam/siamese_net_multi_task/tree/main/Data/datamodule.py)|Wrapper around mammoDataPair and single for lightning module|
+|[transforms.py](https://github.com/alixlam/siamese_net_multi_task/tree/main/Data/transforms.py)|Transforms for mask and image together|
 
 ## Run code <a name="run"></a>
 
