@@ -116,8 +116,16 @@ class mammoDataPair(Dataset):
         else:
             gt_mat = torch.Tensor([0])
                 
+        if 'neg' in file_name_cc:
+          mask_cc = torch.zeros(self.image_size).unsqueeze(0)
+        
+        if 'neg' in file_name_mlo : 
+          mask_mlo = torch.zeros(self.image_size).unsqueeze(0)
+        
+        
         return img_cc, img_mlo, gt_cls_cc.type(torch.LongTensor), gt_cls_mlo.type(torch.LongTensor), gt_mat.type(torch.LongTensor), mask_cc,mask_mlo
-
+        
+        
     def __len__(self):
         assert len(self.cc_list) == len(self.mlo_list)
         return len(self.cc_list)
