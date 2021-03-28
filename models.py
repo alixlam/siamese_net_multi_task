@@ -129,20 +129,32 @@ class VGG16(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, num_classes=1, num_filters=32, pretrained=True, mode='pair'):
+    def __init__(self, num_classes=1, num_filters=32, pretrained=True, shared_segmentation = True):
         super().__init__()
 
         self.base = VGG16(pretrained=pretrained)
-        self.decoder = Decoder(num_classes=num_classes,
-                               num_filters=num_filters)
-
+        self.shared_segmentation = shared_segmentation
+        
+        self.decoder = Decoder(num_classes=num_classes,num_filters=num_filters)
+        self.decoder2 = None
+        
+        if not shared_segmentation :
+            self.decoder2 = Decoder(num_classes = num_classes, num_filters = num_filters)
+        
     def forward(self, x, y = None):
         if y is not None:
             down1_x, down2_x, down3_x, down4_x, down5_x, x_cls, vector_x = self.base(x)
             down1_y, down2_y, down3_y, down4_y, down5_y, y_cls, vector_y = self.base(y)
-
+            
             segm_x = self.decoder(down1_x, down2_x, down3_x, down4_x, down5_x)
-            segm_y = self.decoder(down1_y, down2_y, down3_y, down4_y, down5_y)
+            
+            if self.shared_segmentation: 
+                segm_y = self.decoder(down1_y, down2_y, down3_y, down4_y, down5_y)
+            
+            else :
+                segm_y = self.decoder2(down1_y, down2_y, down3_y, down4_y, down5_y)
+            
+            
             return x_cls, vector_x, segm_x, y_cls, vector_y, segm_y
         
         elif y is None:
