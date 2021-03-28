@@ -32,6 +32,7 @@ class Train:
   loss_weights :  tuple = (1,1,1)
   weight_decay : float  = 5e-4
 
+  shared_segmentation : bool = True
 
 @dataclass
 class Config:
