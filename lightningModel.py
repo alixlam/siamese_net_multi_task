@@ -1,5 +1,6 @@
 
 
+
 import numpy as np
 import torch
 import torch.optim as optim
@@ -29,8 +30,7 @@ class LightningModel(pl.LightningModule):
     """
     super().__init__()
     self.save_hyperparameters()
-    self.net  = Model()
-    #.from_config(self.hparams)
+    self.net  = Model(shared_segmentation = self.hparams.shared_segmentation)
 
   def forward(self, x, y = None):
     return self.net(x, y)
@@ -54,14 +54,20 @@ class LightningModel(pl.LightningModule):
     """
     cls_criterion = nn.CrossEntropyLoss()
     mat_criterion = ContrastiveLoss(margin=self.hparams.margin)
-    segm_criterion = DiceLoss()
+    segm_criterion = LossBinary()
     weight = torch.FloatTensor([weight]).cuda()
     loss_cls_cc = cls_criterion(predict_class_cc, true_class_cc)
     loss_cls_mlo = cls_criterion(predict_class_mlo, true_class_mlo)
 
-    loss_segm_cc = segm_criterion(predict_segm_cc, true_segm_cc)
-    loss_segm_mlo = segm_criterion(predict_segm_mlo, true_segm_mlo)
+    if predict_segm_cc.shape[0] >= 1:
+      loss_segm_cc = segm_criterion(predict_segm_cc, true_segm_cc)
+    else :
+      loss_segm_cc = 0
+    if predict_segm_mlo.shape[0] >= 1:
 
+      loss_segm_mlo = segm_criterion(predict_segm_mlo, true_segm_mlo)
+    else :
+      loss_segm_mlo = 0
     loss_mat = mat_criterion(predict_match_cc, predict_match_mlo, true_match)
 
     weight_clas = self.hparams.loss_weights[0]
@@ -83,21 +89,30 @@ class LightningModel(pl.LightningModule):
     return self.hparams.classification*self.hparams.loss_weights[0]*loss_cls + self.hparams.segmentation * self.hparams.loss_weights[1]*loss_segm
   @staticmethod
   def dice_score(outputs, targets, ratio=0.5):
-    outs = outputs.cpu().detach().numpy()
-    targs = targets.cpu().detach().numpy()
-    outs = outs.flatten()
-    targs = targs.flatten()
-    outs[outs > ratio] = np.float32(1)
-    outs[outs < ratio] = np.float32(0)    
-    return float(2 * (targs * outs).sum())/float(targs.sum() + outs.sum())
-
+    if outputs.shape[0] >=1:
+      outs = outputs.cpu().detach().numpy()
+      targs = targets.cpu().detach().numpy()
+      outs = outs.flatten()
+      targs = targs.flatten()
+      outs[outs > ratio] = np.float32(1)
+      outs[outs < ratio] = np.float32(0) 
+      return float(2 * (targs * outs).sum()+1)/float(targs.sum() + outs.sum()+1)
+    else:
+      return 0.5
 
   def training_step(self, batch, batch_idx):
-    img_cc, img_mlo, gt_cls_cc, gt_cls_mlo, gt_mat, mask_cc, mask_mlo = batch
+    img_cc, img_mlo, gt_cls_cc, gt_cls_mlo, gt_mat, mask_cc, mask_mlo, file_name_cc, file_name_mlo = batch
     img_cc, img_mlo, gt_cls_cc, gt_cls_mlo, gt_mat, mask_cc, mask_mlo = Variable(img_cc.cuda()), Variable(img_mlo.cuda()), Variable(gt_cls_cc.squeeze(1).cuda()), Variable(gt_cls_mlo.squeeze(1).cuda()), Variable(gt_mat.squeeze(1).cuda()), Variable(mask_cc.cuda()), Variable(mask_mlo.cuda())
     cls_cc, fea_cc, segm_cc, cls_mlo, fea_mlo, segm_mlo = self(img_cc, img_mlo)
 
     weight = 1.
+
+    idx_cc = torch.tensor([0 if 'neg' in i else 1 for i in file_name_cc])
+    idx_mlo = torch.tensor([0 if 'neg' in i else 1 for i in file_name_mlo])
+    
+
+    #segm_cc, segm_mlo, mask_cc, mask_mlo = segm_cc[idx_cc == 1],segm_mlo[idx_mlo == 1], mask_cc[idx_cc == 1], mask_mlo[idx_mlo == 1]
+
     loss_ = self.compute_loss(weight,fea_cc, fea_mlo, cls_cc, cls_mlo, segm_cc, segm_mlo, gt_mat, gt_cls_cc, gt_cls_mlo, mask_cc, mask_mlo)
 
     loss = loss_['Total loss']
@@ -106,6 +121,8 @@ class LightningModel(pl.LightningModule):
     mat_loss = loss_['Matching loss']
 
     cls_cc, cls_mlo = cls_cc.squeeze(0).cpu(), cls_mlo.squeeze(0).cpu()
+    cls_cc, cls_mlo = F.softmax(cls_cc, dim = 1),F.softmax(cls_mlo, dim = 1) 
+
     gt_cls_cc, gt_cls_mlo = gt_cls_cc.cpu(), gt_cls_mlo.cpu()
     
     accuracy = pl.metrics.Accuracy()
@@ -125,6 +142,8 @@ class LightningModel(pl.LightningModule):
     if self.hparams.singleval == True:
       img, clas,  mask, files = batch
       img, clas, mask = Variable(img.cuda()), Variable(clas.squeeze(1).cuda()), Variable(mask.cuda())
+      
+      
       output_clas, output_segm = self(img)
       weight = 1.
       dice = self.dice_score(output_segm,mask)
@@ -134,15 +153,21 @@ class LightningModel(pl.LightningModule):
       acc = accuracy(output_clas, clas)
 
     else :
-      img_cc, img_mlo, gt_cls_cc, gt_cls_mlo, gt_mat, mask_cc, mask_mlo = batch
+      img_cc, img_mlo, gt_cls_cc, gt_cls_mlo, gt_mat, mask_cc, mask_mlo,file_name_cc, file_name_mlo = batch
       img_cc, img_mlo, gt_cls_cc, gt_cls_mlo, gt_mat, mask_cc, mask_mlo = Variable(img_cc.cuda()), Variable(img_mlo.cuda()), Variable(gt_cls_cc.squeeze(1).cuda()), Variable(gt_cls_mlo.squeeze(1).cuda()), Variable(gt_mat.squeeze(1).cuda()), Variable(mask_cc.cuda()), Variable(mask_mlo.cuda())
       cls_cc, fea_cc, segm_cc, cls_mlo, fea_mlo, segm_mlo = self(img_cc, img_mlo)
+
+      idx_cc = torch.tensor([0 if 'neg' in i else 1 for i in file_name_cc])
+      idx_mlo = torch.tensor([0 if 'neg' in i else 1 for i in file_name_mlo])
+    
+      #segm_cc, segm_mlo, mask_cc, mask_mlo = segm_cc[idx_cc == 1],segm_mlo[idx_mlo == 1], mask_cc[idx_cc == 1], mask_mlo[idx_mlo == 1]
 
       weight = 1.
       loss_ = self.compute_loss(weight,fea_cc, fea_mlo, cls_cc, cls_mlo, segm_cc, segm_mlo, gt_mat, gt_cls_cc, gt_cls_mlo, mask_cc, mask_mlo)
 
       loss = loss_['Total loss']
       cls_cc, cls_mlo = cls_cc.squeeze(0).cpu(), cls_mlo.squeeze(0).cpu()
+      cls_cc, cls_mlo = F.softmax(cls_cc, dim = 1),F.softmax(cls_mlo, dim = 1) 
 
       gt_cls_cc, gt_cls_mlo = gt_cls_cc.cpu(), gt_cls_mlo.cpu()
       acc = (accuracy(cls_cc, gt_cls_cc)+accuracy(cls_mlo, gt_cls_mlo))/2
@@ -160,13 +185,20 @@ class LightningModel(pl.LightningModule):
     img, clas,  mask, files = batch
     img, clas, mask = Variable(img.cuda()), Variable(clas.squeeze(1).cuda()), Variable(mask.cuda())
     output_clas, output_segm = self(img)
+    output_clas = F.softmax(output_clas, dim = 1)
+    #idx = torch.tensor([0 if 'neg' in i else 1 for i in files])
+    #output_segm, mask = output_segm[idx == 1], mask[idx == 1]
+    
     weight = 1.
+    
     dice = self.dice_score(output_segm,mask)
     output_clas = output_clas.squeeze(0).cpu()
     clas = clas.cpu()
     acc = accuracy(output_clas, clas)
     self.log('Test/dice' , dice)
     self.log('Test/accuracy' , acc)
+    print(acc)
+    print(dice)
 
   @classmethod
   def from_config(cls, config):
@@ -183,5 +215,6 @@ class LightningModel(pl.LightningModule):
       classification = config.train.classification,
       segmentation = config.train.segmentation,
       singleval = config.train.singleval,
-      loss_weights = config.train.loss_weights
+      loss_weights = config.train.loss_weights,
+      shared_segmentation = config.train.shared_segmentation
     )
